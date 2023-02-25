@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"log"
 	"os"
@@ -36,8 +37,8 @@ loop:
 	return
 }
 
-func serve(name string, command string, arguments []string) error {
-	cmd := exec.Command(command, arguments...)
+func serve(ctx context.Context, name string, command string, arguments []string) error {
+	cmd := exec.CommandContext(ctx, command, arguments...)
 	if err := cmd.Run(); err != nil {
 		return err
 	}
@@ -79,8 +80,8 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{Name: "name", Required: true},
 		},
-		Action: func(ctx *cli.Context) error {
-			name := ctx.String("name")
+		Action: func(c *cli.Context) error {
+			name := c.String("name")
 
 			isService, err := svc.IsWindowsService()
 			if err != nil {
@@ -89,7 +90,7 @@ func main() {
 
 			command := ""
 			arguments := []string{}
-			values := ctx.Args().Slice()
+			values := c.Args().Slice()
 			if len(values) == 0 {
 				return errors.New("no command")
 			}
@@ -108,15 +109,17 @@ func main() {
 					}
 				}()
 			}
+			ctx, cancel := context.WithCancel(context.Background())
 
 			go func() {
-				if err := serve(name, command, arguments); err != nil {
+				if err := serve(ctx, name, command, arguments); err != nil {
 					log.Fatalf("cannot start %s: %s", name, err.Error())
 				}
 			}()
 
 			for {
 				if <-StopCh {
+					cancel()
 					log.Printf("Shutting down %s", name)
 					break
 				}

@@ -6,6 +6,6 @@ ifdef VERSION
 	LDFLAGS += -X main.version=$(VERSION)
 endif
 test:
-	go test -v ./...
+	GOOS=windows go test -v ./...
 build:
 	GOOS=windows go build --ldflags "$(LDFLAGS)" -o bin/command2windowsservice.exe cmd/command2windowsservice/*.go

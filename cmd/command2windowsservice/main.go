@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 
 	"github.com/urfave/cli/v2"
 	"golang.org/x/sys/windows/svc"
@@ -109,7 +110,8 @@ func main() {
 					}
 				}()
 			}
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+			defer cancel()
 
 			go func() {
 				if err := serve(ctx, name, command, arguments); err != nil {
@@ -119,7 +121,6 @@ func main() {
 
 			for {
 				if <-StopCh {
-					cancel()
 					log.Printf("Shutting down %s", name)
 					break
 				}
